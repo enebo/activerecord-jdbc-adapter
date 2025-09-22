@@ -1,11 +1,40 @@
-require 'active_support/testing/strict_warnings'
+# frozen_string_literal: true
 
-# This module flags methods in rails tests and blows up ours
-module ActiveSupport
-  module RaiseWarnings # :nodoc:
-    begin
-      allowed = remove_const(:ALLOWED_WARNINGS)
-      const_set(:ALLOWED_WARNINGS, Regexp.union(allowed, /previous definition of/))
-    end
+$VERBOSE = true
+Warning[:deprecated] = true
+
+module RailsStrictWarnings # :nodoc:
+  class WarningError < StandardError; end
+
+  PROJECT_ROOT = File.expand_path("../", __dir__)
+  ALLOWED_WARNINGS = Regexp.union(
+    /circular require considered harmful.*delayed_job/, # Bug in delayed job.
+
+    # Expected non-verbose warning emitted by Rails.
+    /Ignoring .*\.yml because it has expired/,
+    /Failed to validate the schema cache because/,
+    /previous definition of/
+  )
+
+  SUPPRESSED_WARNINGS = Regexp.union(
+    # TODO: remove if https://github.com/mikel/mail/pull/1557 or similar fix
+    %r{/lib/mail/parsers/.*statement not reached},
+    %r{/lib/mail/parsers/.*assigned but unused variable - disp_type_s},
+    %r{/lib/mail/parsers/.*assigned but unused variable - testEof}
+  )
+
+  def warn(message, ...)
+    return if SUPPRESSED_WARNINGS.match?(message)
+
+    super
+
+    return unless message.include?(PROJECT_ROOT)
+    return if ALLOWED_WARNINGS.match?(message)
+    return unless ENV["RAILS_STRICT_WARNINGS"] || ENV["BUILDKITE"]
+
+    raise WarningError.new(message)
   end
 end
+
+Warning.singleton_class.prepend(RailsStrictWarnings)
+
