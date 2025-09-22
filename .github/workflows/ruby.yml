@@ -23,7 +23,7 @@ jobs:
     runs-on: ubuntu-latest
     strategy:
       fail-fast: false
-      Matrix:
+      matrix:
         ruby-version: ['jruby-9.4.14.0']
         db: ['mysql2']
         test_targets: ["rails:test_mysql2"]
