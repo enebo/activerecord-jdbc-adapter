@@ -61,7 +61,8 @@ module ArJdbc
 
       properties["connectionCollation"] ||= config[:collation] if config[:collation]
 
-      properties["autoReconnect"] ||= reconnect.to_s unless config[:reconnect].nil?
+      reconnect = config[:reconnect]
+      properties["autoReconnect"] ||= reconnect.to_s unless reconnect.nil?
 
       properties["noDatetimeStringSync"] = true unless properties.key?("noDatetimeStringSync")
 
