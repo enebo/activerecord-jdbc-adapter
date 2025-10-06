@@ -142,7 +142,7 @@ end
 
 def make_db_list
   env_dbs = ENV["DBS"]
-  env_dbs = "mysql,postgresql,sqlite3" if env_dbs == "all" || env_dbs.nil? || env_dbs.strip.empty?
+  env_dbs = "mysql,postgresql,sqlite3" if env_dbs == "all" || env_dbs.nil?
   requested = env_dbs.split(",").map(&:strip).reject(&:empty?).map(&:downcase)
   invalid_dbs! unless requested.size > 0 && requested.size <= 3 && requested == requested.uniq
 
