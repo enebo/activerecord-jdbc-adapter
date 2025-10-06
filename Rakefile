@@ -96,7 +96,7 @@ end
 
 desc "Releasing AR-JDBC gems (use NOOP=true to disable gem pushing)"
 task 'release:do' do
-  if !ENV["DBS"] || ENV["DBS"].strip.empty?
+  if !ENV["DBS"]
     puts "you must explicitly provide a DBS env var when calling release:do. An empty one will not default to 'all' " \
            "for this command\n\n"
     invalid_dbs!
