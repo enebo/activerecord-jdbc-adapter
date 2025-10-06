@@ -5,6 +5,17 @@
 #
 # Environment variables used by this Rakefile:
 #
+# DBS
+#   Limits the command performed to only work for one of the database
+#   types listed in this env var. You can set to a combination of mysql, 
+#   postgres, or sqlite, separated by commas. For example:
+#
+#    mysql,postgres,sqlite
+#
+#    You may use pg or postgres as aliases for postgresql
+#    You may use sqlite3 as an alias for sqlite
+#    You may use all to mean all three
+#
 # INCLUDE_JAR_IN_GEM [default task - false, other taks - true]:
 #   Note: This is something you should not normally have to set.
 #   For local development we always will end up including the jar file
@@ -107,8 +118,42 @@ task 'release:push' do
   sh "for gem in `ls pkg/*-#{current_version.call}-java.gem`; do gem push $gem; done"
 end
 
-ADAPTERS = %w[mysql postgresql sqlite3].map { |a| "activerecord-jdbc#{a}-adapter" }
-DRIVERS  = %w[mysql postgres sqlite3].map { |a| "jdbc-#{a}" }
+DB_ALIASES = {
+  'mysql'      => 'mysql',
+  'postgresql' => 'postgresql',
+  'postgres'   => 'postgresql',
+  'pg'         => 'postgresql',
+  'sqlite3'    => 'sqlite3',
+  'sqlite'     => 'sqlite3'
+}
+
+def invalid_dbs!
+  raise ArgumentError, "Invalid DBS env var\nThe DBS env var must be set to a combination of mysql, postgres, or " \
+                       "sqlite, separated by commas. For example:\n\nmysql,postgres,sqlite\n\nYou may use pg or " \
+                       "postgres as aliases for postgresql\nYou may use sqlite3 as an alias for sqlite\n" \
+                       "You may use all to mean all three"
+end
+
+def make_db_list
+ENV["DBS"] = "mysql,postgresql,sqlite3" if ENV["DBS"] == "all" || ENV["DBS"].nil? || ENV["DBS"].strip.empty?
+requested = ENV["DBS"].split(",").map(&:strip).reject(&:empty?).map(&:downcase)
+  invalid_dbs! unless requested.size > 0 && requested.size <= 3 && requested == requested.uniq
+
+  canonical = requested.map do |name|
+    DB_ALIASES.fetch(name) { invalid_dbs! }
+  end
+
+  invalid_dbs! unless canonical == canonical.uniq
+
+  canonical
+end
+
+db_list = make_db_list
+ADAPTERS = db_list.map { |db| "activerecord-jdbc#{db}-adapter" }
+
+db_list.map! {|db| db == 'postgresql' ? 'postgres' : db  }  #naming convention for DRIVERS
+DRIVERS  = db_list.map { |a| "jdbc-#{a}" }
+
 TARGETS = ( ADAPTERS + DRIVERS )
 
 ADAPTERS.each do |target|
