@@ -96,7 +96,7 @@ end
 
 desc "Releasing AR-JDBC gems (use NOOP=true to disable gem pushing)"
 task 'release:do' do
-  if !ENV["DBS"]
+  unless ENV["DBS"]
     puts "you must explicitly provide a DBS env var when calling release:do. An empty one will not default to 'all' " \
            "for this command\n\n"
     invalid_dbs!
@@ -142,7 +142,7 @@ end
 
 def make_db_list
   env_dbs = ENV["DBS"]
-  env_dbs = "mysql,postgresql,sqlite3" if env_dbs == "all" || env_dbs.nil?
+  env_dbs = "mysql,postgresql,sqlite3" if !env_dbs || env_dbs == "all"
   requested = env_dbs.split(",").map(&:strip).reject(&:empty?).map(&:downcase)
   invalid_dbs! unless requested.size > 0 && requested.size <= 3 && requested == requested.uniq
 
