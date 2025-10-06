@@ -16,6 +16,10 @@
 #    You may use sqlite3 as an alias for sqlite
 #    You may use all to mean all three
 #
+#    NOTE: if you ever want to add a new type of database to be released,
+#          just fix up this documentation, the error string in invalid_dbs,
+#          and add it to the ALL_DBS array. Everything else should just work!
+#
 # INCLUDE_JAR_IN_GEM [default task - false, other taks - true]:
 #   Note: This is something you should not normally have to set.
 #   For local development we always will end up including the jar file
@@ -124,27 +128,25 @@ task 'release:push' do
   sh "for gem in `ls pkg/*-#{current_version.call}-java.gem`; do gem push $gem; done"
 end
 
-DB_ALIASES = {
-  'mysql'      => 'mysql',
-  'postgresql' => 'postgresql',
-  'postgres'   => 'postgresql',
-  'pg'         => 'postgresql',
-  'sqlite3'    => 'sqlite3',
-  'sqlite'     => 'sqlite3'
-}
+ALL_DBS = ["mysql", "postgresql", "sqlite3"]  #NOTE: if we add a new database type to be released, just add it here!
+DB_ALIASES = ALL_DBS.map {|db| [db, db]}.to_h.merge({
+  "pg" => "postgresql",
+  "postgres" => "postgresql",
+  "sqlite" => "sqlite3"
+})
 
 def invalid_dbs!
   raise ArgumentError, "Invalid DBS env var\nThe DBS env var must be set to a combination of mysql, postgres, or " \
                        "sqlite, separated by commas. For example:\n\nmysql,postgres,sqlite\n\nYou may use pg or " \
                        "postgres as aliases for postgresql\nYou may use sqlite3 as an alias for sqlite\n" \
-                       "You may use all to mean all three"
+                       "You may use all as a shortcut to listing them all out"
 end
 
 def make_db_list
   env_dbs = ENV["DBS"]
-  env_dbs = "mysql,postgresql,sqlite3" if !env_dbs || env_dbs == "all"
+  return ALL_DBS if !env_dbs || env_dbs == "all"
   requested = env_dbs.split(",").map(&:strip).reject(&:empty?).map(&:downcase)
-  invalid_dbs! unless requested.size > 0 && requested.size <= 3 && requested == requested.uniq
+  invalid_dbs! unless requested.size > 0 && requested == requested.uniq
 
   canonical = requested.map do |name|
     DB_ALIASES.fetch(name) { invalid_dbs! }
